@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>道路気象予測</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <div id="staleBanner" class="stale-banner" hidden>
+        最新データ取得に失敗。前回データを表示中
+      </div>
+
+      <header class="top-bar">
+        <div id="announcementTime" class="announcement-time">読み込み中</div>
+        <button id="filterButton" class="icon-button" type="button" aria-label="表示設定を開く">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h9" />
+            <path d="M17 7h3" />
+            <path d="M15 5v4" />
+            <path d="M4 12h3" />
+            <path d="M11 12h9" />
+            <path d="M9 10v4" />
+            <path d="M4 17h11" />
+            <path d="M19 17h1" />
+            <path d="M17 15v4" />
+          </svg>
+        </button>
+      </header>
+
+      <main class="content">
+        <div id="tableWrap" class="table-wrap" aria-live="polite"></div>
+      </main>
+    </div>
+
+    <div id="sheetOverlay" class="sheet-overlay" hidden></div>
+    <aside id="filterSheet" class="filter-sheet" aria-hidden="true" aria-labelledby="filterTitle">
+      <div class="sheet-header">
+        <h2 id="filterTitle">表示設定</h2>
+        <button id="closeSheetButton" class="close-button" type="button" aria-label="閉じる">×</button>
+      </div>
+
+      <section class="setting-block">
+        <h3>表示サイズ</h3>
+        <div class="segmented-control" role="radiogroup" aria-label="表示サイズ">
+          <button type="button" data-size="small">小</button>
+          <button type="button" data-size="standard">標準</button>
+          <button type="button" data-size="large">大</button>
+        </div>
+      </section>
+
+      <section class="setting-block section-list-block">
+        <h3>区間</h3>
+        <div id="sectionList" class="section-list"></div>
+      </section>
+    </aside>
+
+    <script src="./vendor/papaparse.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
