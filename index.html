@@ -74,7 +74,7 @@ body {
 #grid-container {
   font-size: var(--base-font-size);
   user-select: none;
-  touch-action: pan-x pan-y pinch-zoom;
+  touch-action: pan-x pan-y;
 }
 .header-wrapper {
   display: flex;
@@ -933,8 +933,10 @@ function switchTab(tab) {
 
 function applyZoom(scale) {
   currentScale = Math.min(2.0, Math.max(0.5, scale));
-  const basePx = 11 * currentScale;
-  document.documentElement.style.setProperty('--base-font-size', `${basePx}px`);
+  const gc = document.getElementById('grid-container');
+  if (gc) gc.style.zoom = currentScale;
+  const hw = document.getElementById('header-wrapper');
+  if (hw) hw.style.zoom = currentScale;
   syncHeaderScroll();
 }
 
