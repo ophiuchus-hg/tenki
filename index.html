@@ -36,23 +36,30 @@ body {
 .tab-bar {
   display: flex;
   background: #0f172a;
+  padding: 6px 8px;
 }
 .tab-btn {
   flex: 1;
   padding: 8px 4px;
   background: #1e293b;
-  color: #94a3b8;
-  border: none;
+  color: #cbd5e1;
+  border: 1px solid #475569;
   font-size: 0.85rem;
   font-weight: bold;
   cursor: pointer;
   text-align: center;
-  border-bottom: 3px solid transparent;
+}
+.tab-btn:first-child {
+  border-radius: 10px 0 0 10px;
+}
+.tab-btn:last-child {
+  border-radius: 0 10px 10px 0;
+  border-left: none;
 }
 .tab-btn.active {
-  background: #0f172a;
-  color: #38bdf8;
-  border-bottom: 3px solid #38bdf8;
+  background: #38bdf8;
+  color: #0f172a;
+  border-color: #38bdf8;
 }
 .meta-bar {
   display: flex;
