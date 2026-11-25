@@ -1,62 +1,995 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>道路気象予測</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <div class="app-shell">
-      <div id="staleBanner" class="stale-banner" hidden>
-        最新データ取得に失敗。前回データを表示中
-      </div>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<title>雪氷予報（TORIANSE）</title>
+<style>
+:root {
+  --base-font-size: 11px;
+  --w-sec: 1.8rem;
+  --w-elem: 1.6rem;
+  --w-col: 2.3rem;
+  --h-row: 1.7rem;
+  --bg-subzero: #fdecea;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  background-color: #f1f5f9;
+  color: #1e293b;
+  line-height: 1.2;
+  -webkit-text-size-adjust: 100%;
+}
+#app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #ffffff;
+  border-bottom: 1px solid #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.tab-bar {
+  display: flex;
+  background: #0f172a;
+}
+.tab-btn {
+  flex: 1;
+  padding: 8px 4px;
+  background: #1e293b;
+  color: #94a3b8;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: bold;
+  cursor: pointer;
+  text-align: center;
+  border-bottom: 3px solid transparent;
+}
+.tab-btn.active {
+  background: #0f172a;
+  color: #38bdf8;
+  border-bottom: 3px solid #38bdf8;
+}
+.meta-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  background: #f8fafc;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+}
+.publish-label {
+  font-weight: 600;
+}
+.zoom-reset-btn {
+  background: #e2e8f0;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  cursor: pointer;
+}
+#grid-container {
+  font-size: var(--base-font-size);
+  user-select: none;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+.header-wrapper {
+  display: flex;
+  background: #0f172a;
+  color: #ffffff;
+  border-bottom: 1px solid #334155;
+}
+.header-corner {
+  flex: 0 0 calc(var(--w-sec) + var(--w-elem));
+  width: calc(var(--w-sec) + var(--w-elem));
+  background: #0f172a;
+  border-right: 1px solid #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75em;
+  font-weight: bold;
+  color: #94a3b8;
+}
+.header-scroll {
+  flex: 1;
+  overflow: hidden;
+}
+.header-table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: #ffffff;
+}
+.header-table th {
+  padding: 2px 0;
+  text-align: center;
+  border-right: 1px solid #334155;
+  border-bottom: 1px solid #334155;
+  white-space: nowrap;
+  font-weight: normal;
+}
+.header-date-row th {
+  background: #0f172a;
+  font-size: 0.85em;
+  font-weight: bold;
+  padding: 3px 0;
+}
+.header-date-row th.sat { color: #38bdf8; }
+.header-date-row th.sun { color: #f87171; }
+.header-time-row th {
+  background: #1e293b;
+  font-size: 0.75em;
+  width: var(--w-col);
+  min-width: var(--w-col);
+  max-width: var(--w-col);
+}
+.body-wrapper {
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+.data-table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: #ffffff;
+}
+.data-table td, .data-table th {
+  height: var(--h-row);
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #cbd5e1;
+  text-align: center;
+  padding: 0;
+  font-size: 0.9em;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.sec-cell {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  width: var(--w-sec);
+  min-width: var(--w-sec);
+  max-width: var(--w-sec);
+  background: #f1f5f9;
+  font-size: 0.75em;
+  font-weight: 600;
+  line-height: 1.1;
+  padding: 2px 1px;
+  border-right: 1px solid #94a3b8;
+  border-bottom: 2px solid #64748b;
+  color: #0f172a;
+}
+.sec-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  word-break: break-all;
+}
+.sec-sep {
+  font-size: 0.7em;
+  color: #64748b;
+  margin: 1px 0;
+}
+.elem-cell {
+  position: sticky;
+  left: var(--w-sec);
+  z-index: 9;
+  width: var(--w-elem);
+  min-width: var(--w-elem);
+  max-width: var(--w-elem);
+  background: #f8fafc;
+  font-size: 0.75em;
+  font-weight: 600;
+  border-right: 1px solid #94a3b8;
+  color: #334155;
+}
+.data-table tr.last-in-group td,
+.data-table tr.last-in-group th {
+  border-bottom: 2px solid #64748b;
+}
+.val-cell {
+  width: var(--w-col);
+  min-width: var(--w-col);
+  max-width: var(--w-col);
+  background: #ffffff;
+}
+.val-subzero-bg {
+  background-color: var(--bg-subzero);
+}
+.text-subzero {
+  color: #dc2626 !important;
+  font-weight: bold;
+}
+.snow-bg-0 { background-color: #b9e2ff !important; color: #000000; }
+.snow-bg-1 { background-color: #2f80ed !important; color: #ffffff; font-weight: bold; }
+.snow-bg-5 { background-color: #1e3a8a !important; color: #ffffff; font-weight: bold; }
+.snow-bg-10 { background-color: #7c2d8e !important; color: #ffffff; font-weight: bold; }
+.snow-bg-20 { background-color: #d92d20 !important; color: #ffffff; font-weight: bold; }
+.weather-tile {
+  width: calc(var(--h-row) - 6px);
+  height: calc(var(--h-row) - 6px);
+  max-width: 24px;
+  max-height: 24px;
+  margin: 0 auto;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+.weather-tile svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.weather-unknown {
+  width: calc(var(--h-row) - 6px);
+  height: calc(var(--h-row) - 6px);
+  max-width: 24px;
+  max-height: 24px;
+  margin: 0 auto;
+  border-radius: 4px;
+  background: #94a3b8;
+  color: #fff;
+  font-size: 0.7em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+#info-panel {
+  padding: 10px 8px 30px;
+  font-size: 0.75rem;
+  color: #475569;
+  line-height: 1.4;
+  background: #f8fafc;
+  border-top: 1px solid #cbd5e1;
+}
+.legend-sec {
+  margin-bottom: 8px;
+}
+.legend-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+  color: #1e293b;
+}
+.legend-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.chip {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+.legend-weather-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.legend-weather-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.credit {
+  margin-top: 10px;
+  font-size: 0.7rem;
+  color: #64748b;
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 6px;
+}
+.error-msg {
+  padding: 40px 16px;
+  text-align: center;
+  color: #dc2626;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+</style>
+</head>
+<body>
 
-      <header class="top-bar">
-        <div id="announcementTime" class="announcement-time">読み込み中</div>
-        <button id="filterButton" class="icon-button" type="button" aria-label="表示設定を開く">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 7h9" />
-            <path d="M17 7h3" />
-            <path d="M15 5v4" />
-            <path d="M4 12h3" />
-            <path d="M11 12h9" />
-            <path d="M9 10v4" />
-            <path d="M4 17h11" />
-            <path d="M19 17h1" />
-            <path d="M17 15v4" />
-          </svg>
-        </button>
-      </header>
-
-      <main class="content">
-        <div id="tableWrap" class="table-wrap" aria-live="polite"></div>
-      </main>
+<div id="app-header">
+  <div class="tab-bar">
+    <button type="button" class="tab-btn active" id="tab-short" onclick="switchTab('short')">短期予報（72時間）</button>
+    <button type="button" class="tab-btn" id="tab-weekly" onclick="switchTab('weekly')">週間予報</button>
+  </div>
+  <div class="meta-bar">
+    <span class="publish-label" id="publish-label">—</span>
+    <button type="button" class="zoom-reset-btn" onclick="resetZoom()">倍率リセット</button>
+  </div>
+  <div class="header-wrapper" id="header-wrapper" style="display:none;">
+    <div class="header-corner">区間/要素</div>
+    <div class="header-scroll" id="header-scroll">
+      <div id="header-content"></div>
     </div>
+  </div>
+</div>
 
-    <div id="sheetOverlay" class="sheet-overlay" hidden></div>
-    <aside id="filterSheet" class="filter-sheet" aria-hidden="true" aria-labelledby="filterTitle">
-      <div class="sheet-header">
-        <h2 id="filterTitle">表示設定</h2>
-        <button id="closeSheetButton" class="close-button" type="button" aria-label="閉じる">×</button>
-      </div>
+<div id="grid-container">
+  <div class="body-wrapper" id="body-scroll">
+    <div id="grid-content"></div>
+  </div>
+</div>
 
-      <section class="setting-block">
-        <h3>表示サイズ</h3>
-        <div class="segmented-control" role="radiogroup" aria-label="表示サイズ">
-          <button type="button" data-size="small">小</button>
-          <button type="button" data-size="standard">標準</button>
-          <button type="button" data-size="large">大</button>
-        </div>
-      </section>
+<div id="info-panel">
+  <div class="legend-sec">
+    <div class="legend-title">降雪量（背景色）</div>
+    <div class="legend-chips">
+      <span class="chip" style="background:#ffffff; color:#333;">0cm未満(なし)</span>
+      <span class="chip snow-bg-0">0cm / 1cm未満</span>
+      <span class="chip snow-bg-1">1〜5cm</span>
+      <span class="chip snow-bg-5">5〜10cm</span>
+      <span class="chip snow-bg-10">10〜20cm</span>
+      <span class="chip snow-bg-20">20cm以上</span>
+    </div>
+    <div>※気温・路温が0℃以下の値は赤字</div>
+  </div>
+  <div class="legend-sec" id="legend-weather-sec" style="display:none;">
+    <div class="legend-title">天気マーク</div>
+    <div class="legend-weather-list" id="legend-weather-list"></div>
+  </div>
+  <div class="credit">
+    出典：TORIANSE（ウェザーニューズ）雪氷期短期予報・週間予報／エリア：長野
+  </div>
+</div>
 
-      <section class="setting-block section-list-block">
-        <h3>区間</h3>
-        <div id="sectionList" class="section-list"></div>
-      </section>
-    </aside>
+<script>
+const EXCLUDED_SECTIONS = [
+  '松井田妙義〜碓氷軽井沢',
+  '碓氷軽井沢〜佐久',
+  '佐久〜東部湯の丸・佐久小諸JCT〜小諸御影TB',
+  '東部湯の丸〜坂城'
+];
 
-    <script src="./vendor/papaparse.min.js"></script>
-    <script src="./app.js"></script>
-  </body>
+const NAME_REPLACEMENTS = [
+  ['須坂長野東', '須坂'],
+  ['信州中野', '中野'],
+  ['豊田飯山', '飯山'],
+  ['信濃町', '信濃'],
+  ['更埴JCT', '更埴'],
+  ['安曇野', '安曇']
+];
+
+const WEATHER_META = {
+  '○': { name: '晴れ', bg: '#ea580c', icon: 'sun' },
+  '◎': { name: '曇り', bg: '#475569', icon: 'cloud' },
+  '●': { name: '雨', bg: '#2563eb', icon: 'rain' },
+  '＊': { name: '雪', bg: '#0284c7', icon: 'snow' },
+  'み': { name: 'みぞれ', bg: '#0ea5e9', icon: 'sleet' },
+  '雷': { name: '雷', bg: '#4338ca', icon: 'thunder' },
+  '霧': { name: '霧', bg: '#64748b', icon: 'fog' }
+};
+
+let currentTab = 'short';
+const dataCache = { short: null, weekly: null };
+let currentScale = 1.0;
+
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = [];
+  let row = [];
+  let inQuotes = false;
+  let token = '';
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    const next = text[i + 1];
+    if (inQuotes) {
+      if (c === '"') {
+        if (next === '"') {
+          token += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        token += c;
+      }
+    } else {
+      if (c === '"') {
+        inQuotes = true;
+      } else if (c === ',') {
+        row.push(token);
+        token = '';
+      } else if (c === '\r') {
+        if (next === '\n') i++;
+        row.push(token);
+        token = '';
+        rows.push(row);
+        row = [];
+      } else if (c === '\n') {
+        row.push(token);
+        token = '';
+        rows.push(row);
+        row = [];
+      } else {
+        token += c;
+      }
+    }
+  }
+  if (token !== '' || row.length > 0) {
+    row.push(token);
+    rows.push(row);
+  }
+  return rows;
+}
+
+function shortenPlaceName(name) {
+  let s = name;
+  for (const [from, to] of NAME_REPLACEMENTS) {
+    s = s.split(from).join(to);
+  }
+  return s;
+}
+
+function formatSectionName(rawSec) {
+  const clean = rawSec.replace(/（[^）]*）|\([^)]*\)/g, '').trim();
+  const parts = clean.split('〜');
+  if (parts.length === 2) {
+    return [shortenPlaceName(parts[0].trim()), shortenPlaceName(parts[1].trim())];
+  }
+  return [shortenPlaceName(clean), ''];
+}
+
+function parseShortCSV(rows) {
+  if (!rows || rows.length < 2) return null;
+  const header = rows[0];
+  const publishLabel = header[0] || '';
+  const timeLabels = header.slice(14, 86);
+
+  const sections = [];
+  let curSec = null;
+  let curRows = {};
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || r.length < 14) continue;
+    const secNameRaw = (r[2] || '').trim();
+    if (secNameRaw) {
+      if (curSec && Object.keys(curRows).length > 0) {
+        if (!EXCLUDED_SECTIONS.includes(curSec)) {
+          sections.push({ rawName: curSec, rows: curRows });
+        }
+      }
+      curSec = secNameRaw;
+      curRows = {};
+    }
+    const elemKey = (r[13] || '').trim();
+    if (['天気', '降雪量(cm/h)', '気温(℃)', '路温(℃)'].includes(elemKey)) {
+      curRows[elemKey] = r.slice(14, 86);
+    }
+  }
+  if (curSec && Object.keys(curRows).length > 0) {
+    if (!EXCLUDED_SECTIONS.includes(curSec)) {
+      sections.push({ rawName: curSec, rows: curRows });
+    }
+  }
+
+  return { type: 'short', publishLabel, timeLabels, sections };
+}
+
+function parseWeeklyCSV(rows) {
+  if (!rows || rows.length < 2) return null;
+  const header = rows[0];
+  const publishLabel = header[0] || '';
+  const periodLabels = header.slice(8, 21);
+
+  const sections = [];
+  let curSec = null;
+  let curRows = {};
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || r.length < 8) continue;
+    const secNameRaw = (r[2] || '').trim();
+    if (secNameRaw) {
+      if (curSec && Object.keys(curRows).length > 0) {
+        const cleanName = curSec.replace(/（[^）]*）|\([^)]*\)/g, '').trim();
+        if (!EXCLUDED_SECTIONS.includes(cleanName)) {
+          sections.push({ rawName: curSec, rows: curRows });
+        }
+      }
+      curSec = secNameRaw;
+      curRows = {};
+    }
+    const elemKey = (r[7] || '').trim();
+    if (['天気', '降雪量(cm)', '最高気温(℃)', '最低気温(℃)'].includes(elemKey)) {
+      curRows[elemKey] = r.slice(8, 21);
+    }
+  }
+  if (curSec && Object.keys(curRows).length > 0) {
+    const cleanName = curSec.replace(/（[^）]*）|\([^)]*\)/g, '').trim();
+    if (!EXCLUDED_SECTIONS.includes(cleanName)) {
+      sections.push({ rawName: curSec, rows: curRows });
+    }
+  }
+
+  return { type: 'weekly', publishLabel, periodLabels, sections };
+}
+
+function renderSVGSymbol(icon, cx, cy, s) {
+  if (icon === 'sun') {
+    return `<g transform="translate(${cx},${cy}) scale(${s}) translate(-16,-16)" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+      <circle cx="16" cy="16" r="6" fill="#fff" stroke="none" />
+      <line x1="16" y1="3" x2="16" y2="6"/>
+      <line x1="16" y1="26" x2="16" y2="29"/>
+      <line x1="3" y1="16" x2="6" y2="16"/>
+      <line x1="26" y1="16" x2="29" y2="16"/>
+      <line x1="6.8" y1="6.8" x2="8.9" y2="8.9"/>
+      <line x1="23.1" y1="23.1" x2="25.2" y2="25.2"/>
+      <line x1="6.8" y1="25.2" x2="8.9" y2="23.1"/>
+      <line x1="23.1" y1="8.9" x2="25.2" y2="6.8"/>
+    </g>`;
+  } else if (icon === 'cloud') {
+    return `<path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" fill="#fff" transform="translate(${cx},${cy}) scale(${s * 0.95}) translate(-12,-12)" />`;
+  } else if (icon === 'rain') {
+    return `<g transform="translate(${cx},${cy}) scale(${s * 0.9}) translate(-16,-16)">
+      <path d="M21 11.5C20.5 8.5 18 6.5 15 6.5c-2.4 0-4.5 1.4-5.5 3.4-2.5.3-4.5 2.4-4.5 5 0 2.8 2.2 5.1 5 5.1h10c2.2 0 4-1.8 4-4 0-2.1-1.6-3.8-3.7-4z" fill="#fff"/>
+      <line x1="9" y1="23" x2="7" y2="28" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>
+      <line x1="15" y1="23" x2="13" y2="28" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>
+      <line x1="21" y1="23" x2="19" y2="28" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>
+    </g>`;
+  } else if (icon === 'snow') {
+    return `<g transform="translate(${cx},${cy}) scale(${s * 0.9}) translate(-16,-16)" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
+      <line x1="16" y1="4" x2="16" y2="28"/>
+      <line x1="5.6" y1="10" x2="26.4" y2="22"/>
+      <line x1="5.6" y1="22" x2="26.4" y2="10"/>
+      <circle cx="16" cy="4" r="1" fill="#fff"/>
+      <circle cx="16" cy="28" r="1" fill="#fff"/>
+      <circle cx="5.6" cy="10" r="1" fill="#fff"/>
+      <circle cx="26.4" cy="22" r="1" fill="#fff"/>
+      <circle cx="5.6" cy="22" r="1" fill="#fff"/>
+      <circle cx="26.4" cy="10" r="1" fill="#fff"/>
+    </g>`;
+  } else if (icon === 'sleet') {
+    return `<g transform="translate(${cx},${cy}) scale(${s * 0.9}) translate(-16,-16)">
+      <path d="M21 10.5C20.5 7.8 18 6 15 6c-2.4 0-4.5 1.3-5.5 3.1-2.5.3-4.5 2.2-4.5 4.6 0 2.5 2.2 4.6 5 4.6h10c2.2 0 4-1.6 4-3.6 0-1.9-1.6-3.4-3.7-3.6z" fill="#fff"/>
+      <line x1="9" y1="20" x2="7" y2="25" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+      <g transform="translate(18,23) scale(0.4) translate(-16,-16)" stroke="#fff" stroke-width="3" stroke-linecap="round">
+        <line x1="16" y1="6" x2="16" y2="26"/>
+        <line x1="7.3" y1="11" x2="24.7" y2="21"/>
+        <line x1="7.3" y1="21" x2="24.7" y2="11"/>
+      </g>
+    </g>`;
+  } else if (icon === 'thunder') {
+    return `<g transform="translate(${cx},${cy}) scale(${s * 0.85}) translate(-16,-16)">
+      <path d="M22 10.5C21.5 7.8 19 6 16 6c-2.4 0-4.5 1.3-5.5 3.1-2.5.3-4.5 2.2-4.5 4.6 0 2.5 2.2 4.6 5 4.6h11c2.2 0 4-1.6 4-3.6 0-1.9-1.6-3.4-3.7-3.6z" fill="#fff"/>
+      <polygon points="15,16 11,23 15,23 13,29 20,20 16,20" fill="#facc15" stroke="#ca8a04" stroke-width="0.8"/>
+    </g>`;
+  } else if (icon === 'fog') {
+    return `<g transform="translate(${cx},${cy}) scale(${s * 0.85}) translate(-16,-16)" stroke="#fff" stroke-width="2.4" stroke-linecap="round">
+      <line x1="6" y1="10" x2="26" y2="10"/>
+      <line x1="4" y1="15" x2="28" y2="15"/>
+      <line x1="7" y1="20" x2="25" y2="20"/>
+      <line x1="10" y1="25" x2="22" y2="25"/>
+    </g>`;
+  }
+  return '';
+}
+
+function renderWeatherIconSVG(val) {
+  if (!val || val === '-' || val === '—') return '—';
+  let s1 = '', s2 = '';
+  if (val.includes('//')) {
+    const parts = val.split('//');
+    s1 = parts[0] ? Array.from(parts[0])[0] : '';
+    s2 = parts[1] ? Array.from(parts[1])[0] : '';
+  } else {
+    const chars = Array.from(val);
+    if (chars.length >= 2) {
+      s1 = chars[0];
+      s2 = chars[1];
+    } else {
+      s1 = chars[0];
+    }
+  }
+
+  const meta1 = WEATHER_META[s1];
+  const meta2 = s2 ? WEATHER_META[s2] : null;
+
+  if (!meta1 && !meta2) {
+    return `<div class="weather-unknown">${val}</div>`;
+  }
+
+  if (meta1 && !meta2) {
+    return `<div class="weather-tile" style="background:${meta1.bg}">
+      <svg viewBox="0 0 32 32">
+        ${renderSVGSymbol(meta1.icon, 16, 16, 1)}
+      </svg>
+    </div>`;
+  }
+
+  const c1 = meta1 ? meta1.bg : '#64748b';
+  const c2 = meta2 ? meta2.bg : '#64748b';
+
+  return `<div class="weather-tile">
+    <svg viewBox="0 0 32 32">
+      <polygon points="0,0 32,0 0,32" fill="${c1}" />
+      <polygon points="32,0 32,32 0,32" fill="${c2}" />
+      ${meta1 ? renderSVGSymbol(meta1.icon, 10, 10, 0.6) : ''}
+      ${meta2 ? renderSVGSymbol(meta2.icon, 22, 22, 0.6) : ''}
+    </svg>
+  </div>`;
+}
+
+function extractSymbols(val, set) {
+  if (!val || val === '-' || val === '—') return;
+  if (val.includes('//')) {
+    const parts = val.split('//');
+    if (parts[0]) for (const c of Array.from(parts[0])) if (WEATHER_META[c]) set.add(c);
+    if (parts[1]) for (const c of Array.from(parts[1])) if (WEATHER_META[c]) set.add(c);
+  } else {
+    for (const c of Array.from(val)) {
+      if (WEATHER_META[c]) set.add(c);
+    }
+  }
+}
+
+function parsePublishDate(publishStr) {
+  const m = publishStr.match(/(\d{4})年(\d{1,2})月(\d{1,2})日(\d{1,2})時/);
+  if (!m) return new Date();
+  return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10), parseInt(m[4], 10));
+}
+
+function buildShortHeader(timeLabels, pubDate) {
+  const dayGroups = [];
+  let curGroup = null;
+
+  const pubDay = pubDate.getDate();
+  let baseYear = pubDate.getFullYear();
+  let baseMonth = pubDate.getMonth();
+
+  timeLabels.forEach((label, idx) => {
+    const m = label.match(/(\d{1,2})日(\d{1,2})時/);
+    if (!m) {
+      if (!curGroup) curGroup = { label: '', count: 0, dateObj: pubDate };
+      curGroup.count++;
+      return;
+    }
+    const day = parseInt(m[1], 10);
+    const hour = m[2] + '時';
+
+    let calcMonth = baseMonth;
+    let calcYear = baseYear;
+    if (day < pubDay && (pubDay - day) > 10) {
+      calcMonth++;
+      if (calcMonth > 11) { calcMonth = 0; calcYear++; }
+    }
+    const colDate = new Date(calcYear, calcMonth, day);
+    const dayKey = `${calcMonth + 1}/${day}`;
+
+    if (!curGroup || curGroup.key !== dayKey) {
+      const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+      const wDay = weekdays[colDate.getDay()];
+      curGroup = {
+        key: dayKey,
+        title: `${calcMonth + 1}/${day}（${wDay}）`,
+        dayOfWeek: colDate.getDay(),
+        count: 1
+      };
+      dayGroups.push(curGroup);
+    } else {
+      curGroup.count++;
+    }
+  });
+
+  let h1 = '<tr class="header-date-row">';
+  for (const g of dayGroups) {
+    let cls = '';
+    if (g.dayOfWeek === 6) cls = 'sat';
+    if (g.dayOfWeek === 0) cls = 'sun';
+    h1 += `<th colspan="${g.count}" class="${cls}">${g.title}</th>`;
+  }
+  h1 += '</tr>';
+
+  let h2 = '<tr class="header-time-row">';
+  for (const label of timeLabels) {
+    const m = label.match(/\d{1,2}日(\d{1,2}時)/);
+    const t = m ? m[1] : label;
+    h2 += `<th>${t}</th>`;
+  }
+  h2 += '</tr>';
+
+  return `<table class="header-table">${h1}${h2}</table>`;
+}
+
+function buildWeeklyHeader(periodLabels) {
+  const dayGroups = [];
+  let curGroup = null;
+
+  periodLabels.forEach(p => {
+    const parts = p.split(':');
+    const day = parts[0] || '';
+    if (!curGroup || curGroup.day !== day) {
+      curGroup = { day, count: 1 };
+      dayGroups.push(curGroup);
+    } else {
+      curGroup.count++;
+    }
+  });
+
+  let h1 = '<tr class="header-date-row">';
+  for (const g of dayGroups) {
+    h1 += `<th colspan="${g.count}">${g.day}</th>`;
+  }
+  h1 += '</tr>';
+
+  let h2 = '<tr class="header-time-row">';
+  for (const p of periodLabels) {
+    const parts = p.split(':');
+    const sub = parts[1] || parts[0];
+    h2 += `<th>${sub}</th>`;
+  }
+  h2 += '</tr>';
+
+  return `<table class="header-table">${h1}${h2}</table>`;
+}
+
+function formatValue(v, isSnow, isTemp) {
+  if (v === undefined || v === null || v === '' || v === '-') return { text: '—', rawNum: null };
+  const n = parseFloat(v);
+  if (isNaN(n)) return { text: v, rawNum: null };
+  const numStr = n.toFixed(1).replace(/\.0$/, '');
+  if (isSnow) return { text: numStr + 'cm', rawNum: n };
+  if (isTemp) return { text: numStr + '℃', rawNum: n };
+  return { text: numStr, rawNum: n };
+}
+
+function getSnowBgClass(rawNum) {
+  if (rawNum === null || rawNum === undefined) return '';
+  if (rawNum <= 0) return 'snow-bg-0';
+  if (rawNum < 1) return 'snow-bg-0';
+  if (rawNum < 5) return 'snow-bg-1';
+  if (rawNum < 10) return 'snow-bg-5';
+  if (rawNum < 20) return 'snow-bg-10';
+  return 'snow-bg-20';
+}
+
+function renderGrid(parsedData) {
+  const pubLabelElem = document.getElementById('publish-label');
+  const headerContent = document.getElementById('header-content');
+  const gridContent = document.getElementById('grid-content');
+  const headerWrapper = document.getElementById('header-wrapper');
+  const weatherSec = document.getElementById('legend-weather-sec');
+  const weatherList = document.getElementById('legend-weather-list');
+
+  if (!parsedData) {
+    pubLabelElem.textContent = '—';
+    headerWrapper.style.display = 'none';
+    gridContent.innerHTML = '<div class="error-msg">データを読み込めませんでした</div>';
+    weatherSec.style.display = 'none';
+    return;
+  }
+
+  pubLabelElem.textContent = parsedData.publishLabel;
+  headerWrapper.style.display = 'flex';
+
+  const isShort = parsedData.type === 'short';
+  const colsCount = isShort ? parsedData.timeLabels.length : parsedData.periodLabels.length;
+
+  if (isShort) {
+    const pubDate = parsePublishDate(parsedData.publishLabel);
+    headerContent.innerHTML = buildShortHeader(parsedData.timeLabels, pubDate);
+  } else {
+    headerContent.innerHTML = buildWeeklyHeader(parsedData.periodLabels);
+  }
+
+  const usedWeatherSymbols = new Set();
+  const elemConfigs = isShort ? [
+    { key: '天気', label: '天気', isWeather: true },
+    { key: '降雪量(cm/h)', label: '降雪', isSnow: true },
+    { key: '気温(℃)', label: '気温', isTemp: true },
+    { key: '路温(℃)', label: '路温', isTemp: true, checkSubzeroCol: true }
+  ] : [
+    { key: '天気', label: '天気', isWeather: true },
+    { key: '降雪量(cm)', label: '降雪', isSnow: true },
+    { key: '最高気温(℃)', label: '最高', isTemp: true },
+    { key: '最低気温(℃)', label: '最低', isTemp: true, checkSubzeroCol: true }
+  ];
+
+  let tbodyHtml = '';
+
+  parsedData.sections.forEach(sec => {
+    const [p1, p2] = formatSectionName(sec.rawName);
+
+    const isColSubzero = new Array(colsCount).fill(false);
+    const checkElem = elemConfigs.find(e => e.checkSubzeroCol);
+    if (checkElem && sec.rows[checkElem.key]) {
+      const arr = sec.rows[checkElem.key];
+      for (let c = 0; c < colsCount; c++) {
+        const val = arr[c];
+        if (val !== undefined && val !== null && val !== '' && val !== '-') {
+          const num = parseFloat(val);
+          if (!isNaN(num) && num <= 0) {
+            isColSubzero[c] = true;
+          }
+        }
+      }
+    }
+
+    elemConfigs.forEach((elem, eIdx) => {
+      const isFirst = eIdx === 0;
+      const isLast = eIdx === elemConfigs.length - 1;
+      const rowClass = isLast ? 'last-in-group' : '';
+      tbodyHtml += `<tr class="${rowClass}">`;
+
+      if (isFirst) {
+        tbodyHtml += `<th rowspan="4" class="sec-cell">
+          <div class="sec-text">
+            <span>${p1}</span>
+            ${p2 ? '<span class="sec-sep">|</span><span>' + p2 + '</span>' : ''}
+          </div>
+        </th>`;
+      }
+
+      tbodyHtml += `<th class="elem-cell">${elem.label}</th>`;
+
+      const rowVals = sec.rows[elem.key] || [];
+
+      for (let c = 0; c < colsCount; c++) {
+        const rawVal = rowVals[c];
+        if (elem.isWeather) {
+          extractSymbols(rawVal, usedWeatherSymbols);
+          const iconHtml = renderWeatherIconSVG(rawVal);
+          const subzeroBg = isColSubzero[c] ? 'val-subzero-bg' : '';
+          tbodyHtml += `<td class="val-cell ${subzeroBg}">${iconHtml}</td>`;
+        } else if (elem.isSnow) {
+          const { text, rawNum } = formatValue(rawVal, true, false);
+          const bgCls = getSnowBgClass(rawNum);
+          tbodyHtml += `<td class="val-cell ${bgCls}">${text}</td>`;
+        } else {
+          const { text, rawNum } = formatValue(rawVal, false, true);
+          const isNeg = rawNum !== null && rawNum <= 0;
+          const textCls = isNeg ? 'text-subzero' : '';
+          const subzeroBg = isColSubzero[c] ? 'val-subzero-bg' : '';
+          tbodyHtml += `<td class="val-cell ${textCls} ${subzeroBg}">${text}</td>`;
+        }
+      }
+
+      tbodyHtml += `</tr>`;
+    });
+  });
+
+  gridContent.innerHTML = `<table class="data-table"><tbody>${tbodyHtml}</tbody></table>`;
+
+  if (usedWeatherSymbols.size > 0) {
+    weatherSec.style.display = 'block';
+    let legHtml = '';
+    for (const sym of usedWeatherSymbols) {
+      const meta = WEATHER_META[sym];
+      if (meta) {
+        legHtml += `<div class="legend-weather-item">
+          <div class="weather-tile" style="background:${meta.bg}">
+            <svg viewBox="0 0 32 32">${renderSVGSymbol(meta.icon, 16, 16, 1)}</svg>
+          </div>
+          <span>${meta.name}</span>
+        </div>`;
+      }
+    }
+    weatherList.innerHTML = legHtml;
+  } else {
+    weatherSec.style.display = 'none';
+  }
+
+  syncHeaderScroll();
+}
+
+const bodyScroll = document.getElementById('body-scroll');
+const headerScroll = document.getElementById('header-scroll');
+
+function syncHeaderScroll() {
+  if (bodyScroll && headerScroll) {
+    headerScroll.scrollLeft = bodyScroll.scrollLeft;
+  }
+}
+bodyScroll.addEventListener('scroll', syncHeaderScroll, { passive: true });
+
+async function loadData(tab) {
+  if (dataCache[tab]) {
+    renderGrid(dataCache[tab]);
+    return;
+  }
+  const filename = tab === 'short' ? 'forecast_short.csv' : 'forecast_weekly.csv';
+  const url = `${filename}?_t=${Date.now()}`;
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Fetch failed');
+    const text = await res.text();
+    const rows = parseCSV(text);
+    let parsed = null;
+    if (tab === 'short') {
+      const hasShortHeader = rows[0] && rows[0].some(cell => cell.includes('集計要素'));
+      if (hasShortHeader) parsed = parseShortCSV(rows);
+    } else {
+      const hasWeeklyHeader = rows[0] && rows[0].some(cell => cell.includes('通行止め基準'));
+      if (hasWeeklyHeader) parsed = parseWeeklyCSV(rows);
+    }
+    if (!parsed) throw new Error('Format mismatch');
+    dataCache[tab] = parsed;
+    renderGrid(parsed);
+  } catch (err) {
+    renderGrid(null);
+  }
+}
+
+function switchTab(tab) {
+  if (currentTab === tab) return;
+  currentTab = tab;
+  document.getElementById('tab-short').classList.toggle('active', tab === 'short');
+  document.getElementById('tab-weekly').classList.toggle('active', tab === 'weekly');
+  bodyScroll.scrollLeft = 0;
+  loadData(tab);
+}
+
+function applyZoom(scale) {
+  currentScale = Math.min(2.0, Math.max(0.5, scale));
+  const basePx = 11 * currentScale;
+  document.documentElement.style.setProperty('--base-font-size', `${basePx}px`);
+  syncHeaderScroll();
+}
+
+function resetZoom() {
+  applyZoom(1.0);
+  try {
+    localStorage.setItem('torianse_grid_zoom', '1.0');
+  } catch (e) {}
+}
+
+const savedZoom = localStorage.getItem('torianse_grid_zoom');
+if (savedZoom) {
+  const z = parseFloat(savedZoom);
+  if (!isNaN(z)) applyZoom(z);
+}
+
+const gridContainer = document.getElementById('grid-container');
+let initialDist = 0;
+let initialScale = 1.0;
+let isPinching = false;
+
+gridContainer.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    isPinching = true;
+    initialDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    initialScale = currentScale;
+  }
+}, { passive: true });
+
+gridContainer.addEventListener('touchmove', (e) => {
+  if (isPinching && e.touches.length === 2) {
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    if (initialDist > 0) {
+      const factor = dist / initialDist;
+      applyZoom(initialScale * factor);
+    }
+  }
+}, { passive: true });
+
+gridContainer.addEventListener('touchend', (e) => {
+  if (isPinching && e.touches.length < 2) {
+    isPinching = false;
+    try {
+      localStorage.setItem('torianse_grid_zoom', currentScale.toString());
+    } catch (err) {}
+  }
+}, { passive: true });
+
+loadData('short');
+</script>
+</body>
 </html>
