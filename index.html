@@ -132,7 +132,8 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 .data-table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
   background: #ffffff;
 }
@@ -176,7 +177,7 @@ body {
 }
 .elem-cell {
   position: sticky;
-  left: var(--w-sec);
+  left: calc(var(--w-sec) - 1px);
   z-index: 9;
   width: var(--w-elem);
   min-width: var(--w-elem);
