@@ -7,10 +7,11 @@
 <style>
 :root {
   --base-font-size: 11px;
-  --w-sec: 1.8rem;
-  --w-elem: 1.6rem;
-  --w-col: 2.3rem;
-  --h-row: 1.7rem;
+  --scale: 1;
+  --w-sec: calc(1.8rem * var(--scale));
+  --w-elem: calc(1.6rem * var(--scale));
+  --w-col: calc(2.3rem * var(--scale));
+  --h-row: calc(1.7rem * var(--scale));
   --bg-subzero: #fdecea;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,11 +21,14 @@ body {
   color: #1e293b;
   line-height: 1.2;
   -webkit-text-size-adjust: 100%;
+  overflow-x: clip;
+  touch-action: pan-x pan-y;
 }
 #app-header {
   position: sticky;
   top: 0;
   z-index: 50;
+  touch-action: pan-x pan-y;
   background: #ffffff;
   border-bottom: 1px solid #cbd5e1;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -72,12 +76,13 @@ body {
   cursor: pointer;
 }
 #grid-container {
-  font-size: var(--base-font-size);
+  font-size: calc(var(--base-font-size) * var(--scale));
   user-select: none;
   touch-action: pan-x pan-y;
 }
 .header-wrapper {
   display: flex;
+  font-size: calc(16px * var(--scale));
   background: #0f172a;
   color: #ffffff;
   border-bottom: 1px solid #334155;
@@ -211,10 +216,10 @@ body {
 .snow-bg-10 { background-color: #7c2d8e !important; color: #ffffff; font-weight: bold; }
 .snow-bg-20 { background-color: #d92d20 !important; color: #ffffff; font-weight: bold; }
 .weather-tile {
-  width: calc(var(--h-row) - 6px);
-  height: calc(var(--h-row) - 6px);
-  max-width: 24px;
-  max-height: 24px;
+  width: calc(var(--h-row) - (6px * var(--scale)));
+  height: calc(var(--h-row) - (6px * var(--scale)));
+  max-width: calc(24px * var(--scale));
+  max-height: calc(24px * var(--scale));
   margin: 0 auto;
   border-radius: 4px;
   overflow: hidden;
@@ -229,10 +234,10 @@ body {
   display: block;
 }
 .weather-unknown {
-  width: calc(var(--h-row) - 6px);
-  height: calc(var(--h-row) - 6px);
-  max-width: 24px;
-  max-height: 24px;
+  width: calc(var(--h-row) - (6px * var(--scale)));
+  height: calc(var(--h-row) - (6px * var(--scale)));
+  max-width: calc(24px * var(--scale));
+  max-height: calc(24px * var(--scale));
   margin: 0 auto;
   border-radius: 4px;
   background: #94a3b8;
@@ -934,10 +939,7 @@ function switchTab(tab) {
 
 function applyZoom(scale) {
   currentScale = Math.min(2.0, Math.max(0.5, scale));
-  const gc = document.getElementById('grid-container');
-  if (gc) gc.style.zoom = currentScale;
-  const hw = document.getElementById('header-wrapper');
-  if (hw) hw.style.zoom = currentScale;
+  document.documentElement.style.setProperty('--scale', currentScale);
   syncHeaderScroll();
 }
 
@@ -954,12 +956,13 @@ if (savedZoom) {
   if (!isNaN(z)) applyZoom(z);
 }
 
-const gridContainer = document.getElementById('grid-container');
 let initialDist = 0;
 let initialScale = 1.0;
 let isPinching = false;
 
-gridContainer.addEventListener('touchstart', (e) => {
+function attachPinch(el) {
+  if (!el) return;
+  el.addEventListener('touchstart', (e) => {
   if (e.touches.length === 2) {
     isPinching = true;
     initialDist = Math.hypot(
@@ -970,7 +973,7 @@ gridContainer.addEventListener('touchstart', (e) => {
   }
 }, { passive: true });
 
-gridContainer.addEventListener('touchmove', (e) => {
+  el.addEventListener('touchmove', (e) => {
   if (isPinching && e.touches.length === 2) {
     const dist = Math.hypot(
       e.touches[0].clientX - e.touches[1].clientX,
@@ -983,7 +986,7 @@ gridContainer.addEventListener('touchmove', (e) => {
   }
 }, { passive: true });
 
-gridContainer.addEventListener('touchend', (e) => {
+  el.addEventListener('touchend', (e) => {
   if (isPinching && e.touches.length < 2) {
     isPinching = false;
     try {
@@ -991,6 +994,10 @@ gridContainer.addEventListener('touchend', (e) => {
     } catch (err) {}
   }
 }, { passive: true });
+}
+
+attachPinch(document.getElementById('grid-container'));
+attachPinch(document.getElementById('app-header'));
 
 loadData('short');
 </script>
