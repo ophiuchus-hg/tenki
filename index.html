@@ -121,6 +121,14 @@ body {
   font-size: 0.85em;
   font-weight: bold;
   padding: 3px 0;
+  text-align: left;
+  padding-left: calc(0.35rem * var(--scale));
+}
+.date-label {
+  position: sticky;
+  left: calc(0.35rem * var(--scale));
+  display: inline-block;
+  white-space: nowrap;
 }
 .header-date-row th.sat { color: #38bdf8; }
 .header-date-row th.sun { color: #f87171; }
@@ -694,7 +702,7 @@ function buildShortHeader(timeLabels, pubDate) {
     let cls = '';
     if (g.dayOfWeek === 6) cls = 'sat';
     if (g.dayOfWeek === 0) cls = 'sun';
-    h1 += `<th colspan="${g.count}" class="${cls}">${g.title}</th>`;
+    h1 += `<th colspan="${g.count}" class="${cls}"><span class="date-label">${g.title}</span></th>`;
   }
   h1 += '</tr>';
 
@@ -726,7 +734,7 @@ function buildWeeklyHeader(periodLabels) {
 
   let h1 = '<tr class="header-date-row">';
   for (const g of dayGroups) {
-    h1 += `<th colspan="${g.count}">${g.day}</th>`;
+    h1 += `<th colspan="${g.count}"><span class="date-label">${g.day}</span></th>`;
   }
   h1 += '</tr>';
 
